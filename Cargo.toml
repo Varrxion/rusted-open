@@ -4,3 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+glfw = "0.50"
+gl = "0.14.0"
+bytemuck = "1.18.0"
