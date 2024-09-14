@@ -1,21 +1,25 @@
-use gl::types::GLint;
-use gl::types::GLuint;
-use gl::types::GLfloat;
+use std::ffi::CString;
+use gl::types::{GLint, GLuint, GLfloat};
+use nalgebra::{Matrix4, Vector3};
 use crate::engine::graphics::vbo::VBO;
 use crate::engine::graphics::vao::VAO;
 use crate::engine::graphics::compile::create_shader_program;
 
+use super::graphics_object::GraphicsObject;
+
 pub struct Square {
     vertex_data: Vec<f32>,
-    vao: VAO,        // Using the VAO struct
-    vbo: VBO,        // Using the VBO struct
+    vao: VAO,
+    vbo: VBO,
     shader_program: GLuint,
+    graphics_object: GraphicsObject,
 }
+
 
 impl Square {
     pub fn new() -> Self {
         let vertex_data = vec![
-            // Positions for a square
+            // Dimensions for a square
             -0.5,  0.5, 0.0,  // Top-left
              0.5,  0.5, 0.0,  // Top-right
              0.5, -0.5, 0.0,  // Bottom-right
@@ -25,8 +29,9 @@ impl Square {
         let vertex_shader_src = r#"
             #version 330 core
             layout(location = 0) in vec3 aPos;
+            uniform mat4 model;
             void main() {
-                gl_Position = vec4(aPos, 1.0);
+                gl_Position = model * vec4(aPos, 1.0);
             }
         "#;
 
@@ -45,6 +50,7 @@ impl Square {
             vao: VAO::new(), // Create a new VAO
             vbo: VBO::new(&[]), // Placeholder, will initialize in `initialize` method
             shader_program,
+            graphics_object: GraphicsObject::new(),
         };
         square.initialize();
         square
@@ -78,6 +84,25 @@ impl Square {
         }
     }
 
+    pub fn update_model_matrix(&mut self) {
+        self.graphics_object.update_model_matrix();
+    }
+
+    // Send the model matrix to the shader
+    pub fn apply_transform(&self) {
+        let model_location = unsafe {
+            gl::GetUniformLocation(self.shader_program, CString::new("model").unwrap().as_ptr())
+        };
+
+        // Convert nalgebra Matrix4 to a flat array of f32
+        let model_array: [f32; 16] = self.graphics_object.get_model_matrix().as_slice().try_into().expect("Matrix conversion failed");
+
+        unsafe {
+            gl::UniformMatrix4fv(model_location, 1, gl::FALSE, model_array.as_ptr());
+        }
+    }
+    
+
     pub fn draw(&self) {
         unsafe {
             gl::UseProgram(self.shader_program);
@@ -85,5 +110,29 @@ impl Square {
             gl::DrawArrays(gl::TRIANGLE_FAN, 0, 4);
             VAO::unbind();
         }
+    }
+
+    pub fn get_position(&self) -> Vector3<f32> {
+        self.graphics_object.get_position()
+    }
+
+    pub fn set_position(&mut self, position: Vector3<f32>) {
+        self.graphics_object.set_position(position);
+    }
+
+    pub fn get_rotation(&self) -> f32 {
+        self.graphics_object.get_rotation()
+    }
+
+    pub fn set_rotation(&mut self, rotation: f32) {
+        self.graphics_object.set_rotation(rotation);
+    }
+
+    pub fn get_scale(&self) -> f32 {
+        self.graphics_object.get_scale()
+    }
+
+    pub fn set_scale(&mut self, scale: f32) {
+        self.graphics_object.set_scale(scale);
     }
 }

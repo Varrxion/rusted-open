@@ -1,6 +1,11 @@
+use std::time::Instant;
+
 use glfw::{Action, Context, Key};
 
 use crate::engine::graphics;
+use crate::engine::util::master_clock;
+
+use super::util::master_clock::MasterClock;
 
 // Handle window events like key presses
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
@@ -18,7 +23,7 @@ pub fn start() {
 
     // Create a windowed mode window and its OpenGL context
     let (mut window, events) = glfw
-        .create_window(800, 600, "Hello OpenGL", glfw::WindowMode::Windowed).expect("Failed to create GLFW window.");
+        .create_window(800, 600, "Rusted-OpenGL", glfw::WindowMode::Windowed).expect("Failed to create GLFW window.");
 
     // Make the window's context current
     window.make_current();
@@ -28,12 +33,18 @@ pub fn start() {
 
     // Load OpenGL functions
     graphics::glfw::init();
+    
 
     // Create a Square instance
-    let square = graphics::assets::square::Square::new();
+    let mut square = graphics::assets::square::Square::new();
+
+    let mut master_clock = master_clock::MasterClock::new();
 
     // Main render loop
     while !window.should_close() {
+        //update the clock
+        master_clock.update();
+        
         // Poll events
         glfw.poll_events();
 
@@ -41,6 +52,18 @@ pub fn start() {
         for (_, event) in glfw::flush_messages(&events) {
             handle_window_event(&mut window, event);
         }
+
+        // Update the square's position
+        let movement_speed = 0.2; // Speed of movement
+        let mut posvector = square.get_position();
+        posvector.x += movement_speed * master_clock.get_delta_time();
+        println!("{}", posvector.x);
+        square.set_position(posvector); // Accumulate translation over time
+        square.set_rotation(master_clock.get_delta_time()*3.0);
+        square.update_model_matrix();
+
+        // Apply the transformation to the shader
+        square.apply_transform();
 
         // Render here
         unsafe {
