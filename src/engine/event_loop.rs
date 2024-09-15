@@ -4,10 +4,8 @@ use glfw::{Action, Context, Key};
 use nalgebra::Matrix4;
 
 use crate::engine::graphics;
-use crate::engine::util::master_clock;
 
-use super::graphics::assets::base::graphics_object::Generic2DGraphicsObject;
-use super::util::master_graphics_list::MasterGraphicsList;
+use super::graphics::{assets::base::graphics_object::Generic2DGraphicsObject, util::{master_clock, master_graphics_list::MasterGraphicsList}};
 
 // Handle window events like key presses
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
