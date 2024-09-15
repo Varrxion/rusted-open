@@ -88,13 +88,18 @@ fn run_event_loop(
         let movement_speed = 0.2; // Speed of movement
         let mut posvector = square.get_position();
         posvector.x += movement_speed * master_clock.get_delta_time();
+        posvector.y += movement_speed/3.0 * master_clock.get_delta_time();
         if posvector.x >= 1.0 {
-            posvector.x = 0.0;
+            posvector.x -= 2.0;
         }
-        println!("Position Factor: {}", posvector.x);
+        if posvector.y >= 0.5 {
+            posvector.y -= 1.0;
+        }
+        println!("Position X Factor: {}", posvector.x);
+        println!("Position Y Factor: {}", posvector.y);
         square.set_position(posvector); // Accumulate translation over time
 
-        let rotation_speed = 1.3;
+        let rotation_speed = 2.3;
         let mut rotation_factor = square.get_rotation();
         rotation_factor += rotation_speed * master_clock.get_delta_time();
         if rotation_factor >= full_rotation {
