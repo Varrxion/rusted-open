@@ -5,7 +5,7 @@ use nalgebra::Matrix4;
 
 use crate::engine::graphics;
 
-use super::graphics::{assets::base::graphics_object::Generic2DGraphicsObject, util::{master_clock, master_graphics_list::MasterGraphicsList}};
+use super::graphics::{assets::base::graphics_object::Generic2DGraphicsObject, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::{self, MasterIdGenerator}}};
 
 // Handle window events like key presses
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
@@ -44,9 +44,11 @@ pub fn start() {
     // Initialize the master graphics list
     let mut master_graphics_list = MasterGraphicsList::new();
 
+    let mut master_id_generator = MasterIdGenerator::new();
+
     let mut master_clock = master_clock::MasterClock::new();
 
-    run_event_loop(&mut glfw, &mut window, &events, &projection_matrix, &mut master_graphics_list, &mut master_clock)
+    run_event_loop(&mut glfw, &mut window, &events, &projection_matrix, &mut master_graphics_list, &mut master_id_generator, &mut master_clock)
 }
 
 fn run_event_loop(
@@ -55,16 +57,17 @@ fn run_event_loop(
     events: &std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>,
     projection_matrix: &Matrix4<f32>,
     master_graphics_list: &mut MasterGraphicsList,
+    master_id_generator: &mut MasterIdGenerator,
     master_clock: &mut master_clock::MasterClock
 ) {
     let full_rotation = 2.0 * std::f32::consts::PI; // 360 degrees in radians
 
     let newsquare = {
         let basesquare = graphics::assets::square::Square::new();
-        Arc::new(RwLock::new(Generic2DGraphicsObject::new(basesquare.get_vertex_data(),basesquare.get_shader_program())))
+        Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.generate_id(), basesquare.get_vertex_data(),basesquare.get_shader_program())))
     };
 
-    master_graphics_list.add_object(newsquare);
+    let newsquareid = master_graphics_list.add_object(newsquare);
     
     while !window.should_close() {
         // Update the clock
@@ -79,7 +82,7 @@ fn run_event_loop(
         }
 
         // Retrieve the square from the master graphics list
-        let square = master_graphics_list.get_object(0).expect("Object not found");
+        let square = master_graphics_list.get_object(newsquareid).expect("Object not found");
 
         // Lock for read access
         let mut square = square.write().unwrap();

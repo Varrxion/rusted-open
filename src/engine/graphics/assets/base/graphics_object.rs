@@ -5,6 +5,7 @@ use std::ffi::CString;
 use super::{vao::VAO, vbo::VBO};
 
 pub struct Generic2DGraphicsObject {
+    id: u64,
     vertex_data: Vec<f32>,
     vao: VAO,
     vbo: VBO,
@@ -16,8 +17,9 @@ pub struct Generic2DGraphicsObject {
 }
 
 impl Generic2DGraphicsObject {
-    pub fn new(vertex_data: Vec<f32>, shader_program: GLuint) -> Self {
+    pub fn new(id: u64, vertex_data: Vec<f32>, shader_program: GLuint) -> Self {
         let mut object = Self {
+            id,
             vertex_data,
             vao: VAO::new(), // Create a new VAO
             vbo: VBO::new(&[]), // Placeholder, will initialize in `initialize` method
@@ -93,6 +95,10 @@ impl Generic2DGraphicsObject {
             gl::DrawArrays(gl::TRIANGLE_FAN, 0, (self.vertex_data.len() / 2) as i32);
             VAO::unbind();
         }
+    }
+
+    pub fn get_id(&self) -> u64 {
+        self.id
     }
 
     pub fn set_position(&mut self, position: nalgebra::Vector3<f32>) {
