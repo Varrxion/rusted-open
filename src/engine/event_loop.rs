@@ -114,8 +114,10 @@ fn run_event_loop(
             gl::Clear(gl::COLOR_BUFFER_BIT);    // Clear the screen
         }
 
+        std::mem::drop(square);
+
         // Draw the square
-        square.draw();
+        master_graphics_list.draw_all();
 
         // Swap buffers
         window.swap_buffers();

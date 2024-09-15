@@ -27,12 +27,14 @@ impl MasterGraphicsList {
 
     // Draw all objects in the list
     pub fn draw_all(&self) {
-        let objects = self.objects.read().unwrap();
+        let objects = self.objects.read().unwrap(); // Lock for reading the list
         for obj in objects.iter() {
-            let obj = obj.read().unwrap();
-            obj.draw();
+            if let Ok(obj) = obj.read() { // Lock each object only while drawing
+                obj.draw();
+            }
         }
     }
+    
 
     // Remove all objects from the list
     pub fn remove_all(&self) {
