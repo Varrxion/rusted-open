@@ -1,2 +1,2 @@
 pub mod square;
-mod graphics_object;
+pub mod base;

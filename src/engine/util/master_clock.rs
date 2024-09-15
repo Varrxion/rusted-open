@@ -1,4 +1,4 @@
-use std::time::{Instant, Duration};
+use std::time::Instant;
 
 pub struct MasterClock {
     last_time: Instant,
