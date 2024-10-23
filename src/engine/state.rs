@@ -13,7 +13,7 @@ impl State {
     }
 
     // Handle window events to update active keys
-    pub fn handle_window_event(&mut self, event: WindowEvent) {
+    pub fn handle_key_event(&mut self, event: WindowEvent) {
         if let WindowEvent::Key(key, _, action, _) = event {
             match action {
                 Action::Press | Action::Repeat => {
