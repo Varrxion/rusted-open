@@ -17,6 +17,9 @@ pub struct Generic2DGraphicsObject {
 }
 
 impl Generic2DGraphicsObject {
+
+    const FULL_ROTATION: f32 = 2.0 * std::f32::consts::PI; // 360 degrees in radians
+    
     pub fn new(id: u64, vertex_data: Vec<f32>, shader_program: GLuint) -> Self {
         let mut object = Self {
             id,
@@ -106,7 +109,12 @@ impl Generic2DGraphicsObject {
     }
 
     pub fn set_rotation(&mut self, rotation: f32) {
-        self.rotation = rotation;
+        if rotation >= Self::FULL_ROTATION {
+            self.rotation = rotation - Self::FULL_ROTATION;
+        }
+        else {
+            self.rotation = rotation;
+        }
     }
 
     pub fn set_scale(&mut self, scale: f32) {

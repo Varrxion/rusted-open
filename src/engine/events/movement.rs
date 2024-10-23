@@ -1,19 +1,15 @@
 use std::sync::{Arc, RwLock};
-
 use nalgebra::Vector3;
 use crate::engine::graphics::assets::base::graphics_object::Generic2DGraphicsObject;
 
-pub fn move_up(square: Arc<RwLock<Generic2DGraphicsObject>>, movement_speed: f32, delta_time: f32) {
+pub fn move_object(object: Arc<RwLock<Generic2DGraphicsObject>>, direction: Vector3<f32>, speed: f32, delta_time: f32) {
+    let mut object = object.write().unwrap();
+    let mut pos = object.get_position();
 
-    // Get write access to the square
-    let mut square = square.write().unwrap();
-    // Get the current position
-    let mut pos = square.get_position();
-
-    // Move the object upwards
-    pos.y += movement_speed * delta_time;
+    // Apply movement in the given direction
+    pos += direction * speed * delta_time;
 
     // Update the position and model matrix
-    square.set_position(pos);
-    square.update_model_matrix();
+    object.set_position(pos);
+    object.update_model_matrix();
 }

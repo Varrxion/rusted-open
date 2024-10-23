@@ -1,4 +1,6 @@
 use std::{collections::HashMap, sync::{Arc, RwLock}};
+use nalgebra::Matrix4;
+
 use crate::engine::graphics::assets::base::graphics_object::Generic2DGraphicsObject;
 
 pub struct MasterGraphicsList {
@@ -28,14 +30,17 @@ impl MasterGraphicsList {
     }
 
     // Draw all objects in the list
-    pub fn draw_all(&self) {
+    pub fn draw_all(&self, projection_matrix: &Matrix4<f32>) {
         let objects = self.objects.read().unwrap(); // Lock for reading the list
         for obj in objects.values() {
-            if let Ok(obj) = obj.read() { // Lock each object only while drawing
-                obj.draw();
+            if let Ok(mut obj) = obj.write() { // Lock each object for writing (to update model matrix)
+                obj.update_model_matrix(); // Update the model matrix first
+                obj.apply_transform(projection_matrix); // Apply the projection matrix
+                obj.draw(); // Now draw the object
             }
         }
     }
+    
     
     // Remove an object by ID
     pub fn remove_object(&self, id: u64) {
