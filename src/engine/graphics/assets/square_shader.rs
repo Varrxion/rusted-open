@@ -1,13 +1,13 @@
 use gl::types::GLuint;
 use crate::engine::graphics::compile::create_shader_program;
 
-pub struct Square {
+pub struct SquareShader {
     vertex_data: Vec<f32>,
     shader_program: GLuint,
 }
 
 
-impl Square {
+impl SquareShader {
     pub fn new() -> Self {
         let vertex_data = vec![
             // Dimensions for a square
@@ -37,11 +37,11 @@ impl Square {
 
         let shader_program = create_shader_program(vertex_shader_src, fragment_shader_src);
 
-        let square = Square {
+        let square_shader = SquareShader {
             vertex_data,
             shader_program,
         };
-        square
+        square_shader
     }
 
     // Returns a copy of vertex data
