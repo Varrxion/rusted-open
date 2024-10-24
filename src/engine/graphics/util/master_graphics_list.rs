@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::{Arc, RwLock}};
 use nalgebra::Matrix4;
 
-use crate::engine::graphics::assets::base::graphics_object::Generic2DGraphicsObject;
+use crate::engine::graphics::{assets::base::graphics_object::Generic2DGraphicsObject, scenes::base::scene::Scene};
 
 pub struct MasterGraphicsList {
     objects: RwLock<HashMap<u64, Arc<RwLock<Generic2DGraphicsObject>>>>,
@@ -22,6 +22,21 @@ impl MasterGraphicsList {
         objects.insert(id, obj);
         id
     }
+
+    // Add multiple objects from a Scene to the MasterGraphicsList
+    pub fn load_scene(&self, scene: &Scene) {
+        for obj in scene.get_objects().iter() {
+            // Clone the object first to get a new instance
+            let cloned_obj = obj.read().unwrap().clone(); // Clone the actual object
+            
+            // Wrap the cloned object in Arc and RwLock
+            let arc_obj = Arc::new(RwLock::new(cloned_obj));
+            
+            // Add to the master list
+            self.add_object(arc_obj);
+        }
+    }
+
 
     // Get an object by ID
     pub fn get_object(&self, id: u64) -> Option<Arc<RwLock<Generic2DGraphicsObject>>> {

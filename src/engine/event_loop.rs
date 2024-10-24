@@ -3,16 +3,16 @@ use std::sync::{Arc, RwLock};
 use glfw::{Action, Context, Key};
 use nalgebra::{Matrix4, Vector3};
 
-use crate::engine::{events::movement::rotate_object, graphics};
+use crate::engine::{events::movement::rotate_object, graphics, graphics::scenes};
 
-use super::{events::movement::{self, move_object}, graphics::{assets::base::graphics_object::Generic2DGraphicsObject, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::MasterIdGenerator}}, state::State};
+use super::{events::movement::{self, move_object}, graphics::{assets::base::graphics_object::Generic2DGraphicsObject, scenes::testscene, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::MasterIdGenerator}}, state::State};
 
 pub struct EventLoop {
     glfw: glfw::Glfw,
     window: glfw::Window,
     events: std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>,
     master_graphics_list: MasterGraphicsList,
-    master_id_generator: MasterIdGenerator,
+    master_id_generator: Arc<RwLock<MasterIdGenerator>>,
     master_clock: master_clock::MasterClock,
     projection_matrix: Matrix4<f32>,
     current_resolution_index: usize, // Index to track the current resolution
@@ -58,7 +58,7 @@ impl EventLoop {
         // Initialize the master graphics list
         let mut master_graphics_list = MasterGraphicsList::new();
 
-        let mut master_id_generator = MasterIdGenerator::new();
+        let mut master_id_generator = Arc::new(RwLock::new(MasterIdGenerator::new()));
 
         let mut master_clock = master_clock::MasterClock::new();
 
@@ -88,10 +88,20 @@ impl EventLoop {
 
         let newsquare = {
             let basesquare = graphics::assets::square::Square::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(self.master_id_generator.generate_id(), basesquare.get_vertex_data(),basesquare.get_shader_program())))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(self.master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(),basesquare.get_shader_program(), Vector3::zeros(), 0.0, 1.0)))
         };
     
         let newsquareid = self.master_graphics_list.add_object(newsquare);
+
+        let mut sometestscene = testscene::TestScene::new();
+        sometestscene.initialize(self.master_id_generator.clone());
+
+        self.master_graphics_list.load_scene(sometestscene.get_scene());
+    
+        let firstobj = self.master_graphics_list.get_object(1);
+        let secondobj = self.master_graphics_list.get_object(2);
+
+        drop(sometestscene);
         
         while !self.window.should_close() {
             // Update the clock
@@ -162,7 +172,7 @@ impl EventLoop {
                 gl::Clear(gl::COLOR_BUFFER_BIT);    // Clear the screen
             }
     
-            // Draw the square
+            // Draw
             self.master_graphics_list.draw_all(&self.projection_matrix);
     
             // Swap buffers

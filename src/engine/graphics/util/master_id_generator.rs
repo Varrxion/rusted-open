@@ -10,10 +10,14 @@ impl MasterIdGenerator {
         }
     }
 
+    fn increment_id(&mut self) {
+        self.current_id +=1;
+    }
+
     // Generate and return the next ID
     pub fn generate_id(&mut self) -> u64 {
         let new_id = self.current_id;
-        self.current_id += 1;
+        self.increment_id();
         new_id
     }
 }

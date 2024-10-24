@@ -1,14 +1,14 @@
 use gl::types::{GLfloat, GLint, GLuint};
 use nalgebra::{Matrix4, Vector3};
-use std::ffi::CString;
+use std::{ffi::CString, sync::Arc};
 
 use super::{vao::VAO, vbo::VBO};
 
 pub struct Generic2DGraphicsObject {
     id: u64,
     vertex_data: Vec<f32>,
-    vao: VAO,
-    vbo: VBO,
+    vao: Arc<VAO>,
+    vbo: Arc<VBO>,
     shader_program: GLuint,
     position: nalgebra::Vector3<f32>,
     rotation: f32,
@@ -16,20 +16,37 @@ pub struct Generic2DGraphicsObject {
     model_matrix: Matrix4<f32>,
 }
 
+impl Clone for Generic2DGraphicsObject {
+    fn clone(&self) -> Self {
+        Generic2DGraphicsObject {
+            id: self.id,
+            vertex_data: self.vertex_data.clone(),
+            vao: Arc::clone(&self.vao),
+            vbo: Arc::clone(&self.vbo),
+            shader_program: self.shader_program,
+            position: self.position,
+            rotation: self.rotation,
+            scale: self.scale,
+            model_matrix: self.model_matrix,
+        }
+    }
+}
+
+
 impl Generic2DGraphicsObject {
 
     const FULL_ROTATION: f32 = 2.0 * std::f32::consts::PI; // 360 degrees in radians
     
-    pub fn new(id: u64, vertex_data: Vec<f32>, shader_program: GLuint) -> Self {
+    pub fn new(id: u64, vertex_data: Vec<f32>, shader_program: GLuint, position: Vector3<f32>, rotation: f32, scale: f32) -> Self {
         let mut object = Self {
             id,
             vertex_data,
-            vao: VAO::new(), // Create a new VAO
-            vbo: VBO::new(&[]), // Placeholder, will initialize in `initialize` method
+            vao: VAO::new().into(), // Create a new VAO
+            vbo: VBO::new(&[]).into(), // Placeholder, will initialize in `initialize` method
             shader_program,
-            position: nalgebra::Vector3::zeros(),
-            rotation: 0.0,
-            scale: 1.0,
+            position,
+            rotation,
+            scale,
             model_matrix: Matrix4::identity(), // Identity matrix for 2D
         };
         object.initialize();
@@ -42,7 +59,7 @@ impl Generic2DGraphicsObject {
             self.vao.bind();
 
             // Initialize the VBO with vertex data
-            self.vbo = VBO::new(&self.vertex_data);
+            self.vbo = VBO::new(&self.vertex_data).into();
             self.vbo.bind();
 
             // Specify the layout of the vertex data for 2D
@@ -109,12 +126,7 @@ impl Generic2DGraphicsObject {
     }
 
     pub fn set_rotation(&mut self, rotation: f32) {
-        if rotation >= Self::FULL_ROTATION {
-            self.rotation = rotation - Self::FULL_ROTATION;
-        }
-        else {
-            self.rotation = rotation;
-        }
+        self.rotation = rotation % Self::FULL_ROTATION;
     }
 
     pub fn set_scale(&mut self, scale: f32) {
