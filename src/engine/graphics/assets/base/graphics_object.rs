@@ -1,14 +1,15 @@
 use gl::types::{GLfloat, GLint, GLuint};
 use nalgebra::{Matrix4, Vector3};
-use std::{ffi::CString, sync::Arc};
-
+use std::{ffi::CString, sync::{Arc, RwLock}};
 use super::{vao::VAO, vbo::VBO};
 
 pub struct Generic2DGraphicsObject {
     id: u64,
-    vertex_data: Vec<f32>,
-    vao: Arc<VAO>,
-    vbo: Arc<VBO>,
+    vertex_data: [f32; 8],
+    texture_coords: [f32; 8],
+    vao: Arc<RwLock<VAO>>, // Wrap VAO in Arc<RwLock>
+    position_vbo: Arc<VBO>, // VBO for positions
+    tex_vbo: Arc<VBO>, // VBO for texture coordinates
     shader_program: GLuint,
     position: nalgebra::Vector3<f32>,
     rotation: f32,
@@ -21,8 +22,10 @@ impl Clone for Generic2DGraphicsObject {
         Generic2DGraphicsObject {
             id: self.id,
             vertex_data: self.vertex_data.clone(),
+            texture_coords: self.texture_coords.clone(),
             vao: Arc::clone(&self.vao),
-            vbo: Arc::clone(&self.vbo),
+            position_vbo: Arc::clone(&self.position_vbo),
+            tex_vbo: Arc::clone(&self.tex_vbo),
             shader_program: self.shader_program,
             position: self.position,
             rotation: self.rotation,
@@ -32,52 +35,54 @@ impl Clone for Generic2DGraphicsObject {
     }
 }
 
-
 impl Generic2DGraphicsObject {
-
     const FULL_ROTATION: f32 = 2.0 * std::f32::consts::PI; // 360 degrees in radians
-    
-    pub fn new(id: u64, vertex_data: Vec<f32>, shader_program: GLuint, position: Vector3<f32>, rotation: f32, scale: f32) -> Self {
+
+    pub fn new(
+        id: u64,
+        vertex_data: [f32; 8],
+        texture_coords: [f32; 8],
+        shader_program: GLuint,
+        position: Vector3<f32>,
+        rotation: f32,
+        scale: f32,
+        texture_id: Option<GLuint>, // Accept texture ID as an argument
+    ) -> Self {
         let mut object = Self {
             id,
             vertex_data,
-            vao: VAO::new().into(), // Create a new VAO
-            vbo: VBO::new(&[]).into(), // Placeholder, will initialize in `initialize` method
+            texture_coords,
+            vao: Arc::new(RwLock::new(VAO::new())), // Create a new VAO wrapped in RwLock
+            position_vbo: Arc::new(VBO::new(&[])), // Placeholder for position VBO
+            tex_vbo: Arc::new(VBO::new(&[])), // Placeholder for texture VBO
             shader_program,
             position,
             rotation,
             scale,
             model_matrix: Matrix4::identity(), // Identity matrix for 2D
         };
-        object.initialize();
+        object.initialize(texture_id); // Pass texture ID to initialize
         object
     }
 
-    fn initialize(&mut self) {
+    fn initialize(&mut self, texture_id: Option<GLuint>) {
+        let mut vao = self.vao.write().unwrap(); // Lock the RwLock for mutable access
         unsafe {
             // Bind the VAO
-            self.vao.bind();
+            vao.bind();
 
-            // Initialize the VBO with vertex data
-            self.vbo = VBO::new(&self.vertex_data).into();
-            self.vbo.bind();
+            // Initialize the VBOs with vertex data and texture coordinates
+            self.position_vbo = Arc::new(VBO::new(&self.vertex_data)); // Initialize position VBO
+            self.tex_vbo = Arc::new(VBO::new(&self.texture_coords)); // Initialize texture VBO
 
-            // Specify the layout of the vertex data for 2D
-            gl::VertexAttribPointer(
-                0, // Attribute index
-                2, // Number of components per vertex attribute (2 for 2D positions)
-                gl::FLOAT, // Data type of each component
-                gl::FALSE, // Whether the data should be normalized
-                2 * std::mem::size_of::<GLfloat>() as GLint, // Stride (spacing between consecutive attributes)
-                std::ptr::null(), // Pointer to the start of the data
-            );
-            gl::EnableVertexAttribArray(0); // Enable the vertex attribute array for index 0
+            // Setup vertex attributes for the VAO
+            vao.setup_vertex_attributes(vec![
+                (self.position_vbo.id(), 2, 0), // Position VBO
+                (self.tex_vbo.id(), 2, 1),       // Texture coordinate VBO
+            ], texture_id); // Pass texture ID dynamically
 
             // Unbind the VAO
             VAO::unbind();
-
-            // Unbind the VBO
-            VBO::unbind();
         }
     }
 
@@ -110,7 +115,8 @@ impl Generic2DGraphicsObject {
     pub fn draw(&self) {
         unsafe {
             gl::UseProgram(self.shader_program);
-            self.vao.bind();
+            let vao = self.vao.read().unwrap(); // Lock the RwLock for read access
+            vao.bind();
             // Draw elements based on the number of vertices
             gl::DrawArrays(gl::TRIANGLE_FAN, 0, (self.vertex_data.len() / 2) as i32);
             VAO::unbind();

@@ -1,8 +1,8 @@
 use std::sync::{Arc, RwLock};
 
-use nalgebra::Vector3;
+use nalgebra::{base, Vector3};
 
-use crate::engine::graphics::{self, assets::{base::graphics_object::Generic2DGraphicsObject, custom_shader}, util::master_id_generator::{self, MasterIdGenerator}};
+use crate::engine::graphics::{self, assets::{base::graphics_object::Generic2DGraphicsObject, custom_shader}, texture_manager::TextureManager, util::master_id_generator::{self, MasterIdGenerator}};
 
 use super::base::scene::Scene;
 
@@ -20,30 +20,53 @@ impl TestScene {
         }
     }
 
-    pub fn initialize(&mut self, master_id_generator: Arc<RwLock<MasterIdGenerator>>) {
+    pub fn initialize(&mut self, master_id_generator: Arc<RwLock<MasterIdGenerator>>, texture_manager: Arc<RwLock<TextureManager>>) {
+
+        let newsquaretextureid = texture_manager.read().unwrap().get_texture_id("FamiliarBlock");
+
         let newsquare = {
             let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(),basesquare.get_shader_program(), Vector3::new(0.3, 0.0, 0.0), 0.0, 1.0)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(0.3, 0.0, 0.0), 0.0, 1.0, newsquaretextureid)))
         };
+
+        let othersquaretextureid = texture_manager.read().unwrap().get_texture_id("BasicCharacterGreen");
 
         let othersquare = {
             let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(),basesquare.get_shader_program(), Vector3::new(-0.3, 0.0, 0.0), 0.0, 1.0)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(-0.3, 0.0, 0.0), 0.0, 1.0, othersquaretextureid)))
         };
 
-        let vertex_data = vec![
-            // Dimensions for a square
-             0.1,  0.1,  // Top-right
-             0.1, -0.1,  // Bottom-right
-            -0.1, -0.1,  // Bottom-left
+        // Vertex data
+        let vertex_data: [f32; 8] = [
+            // Positions (x, y)
+            0.1,  0.1,   // Top-right
+            0.1, -0.1,   // Bottom-right
+            -0.1, -0.1,   // Bottom-left
+            -0.1,  0.1,   // Top-left
         ];
+
+        // Texture coordinates
+        let texture_coords: [f32; 8] = [
+            // Texture coordinates (u, v)
+            1.0, 0.0,   // Top-right
+            1.0, 1.0,   // Bottom-right
+            0.0, 1.0,   // Bottom-left
+            0.0, 0.0,   // Top-left
+        ];
+
 
         let vertex_shader_src = r#"
             #version 330 core
             layout(location = 0) in vec2 aPos;
+            layout(location = 1) in vec2 aTexCoord;
+
+            out vec2 TexCoords; // Pass to the fragment shader
+
             uniform mat4 model;
             uniform mat4 projection;
+
             void main() {
+                TexCoords = aTexCoord; // Pass the coordinates along
                 gl_Position = projection * model * vec4(aPos, 0.0, 1.0);
             }
         "#;
@@ -51,14 +74,21 @@ impl TestScene {
         let fragment_shader_src = r#"
             #version 330 core
             out vec4 FragColor;
+
+            in vec2 TexCoords; // Texture coordinates from the vertex shader
+
+            uniform sampler2D texture_sampler;
+
             void main() {
-                FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+                FragColor = texture(texture_sampler, TexCoords); // Sample the texture
             }
         "#;
 
+        let customobjecttextureid = texture_manager.read().unwrap().get_texture_id("BasicCharacterRed");
+
         let customobject = {
-            let custom_shader = graphics::assets::custom_shader::CustomShader::new(vertex_data, &vertex_shader_src, &fragment_shader_src);
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), custom_shader.get_vertex_data(), custom_shader.get_shader_program(), Vector3::zeros(), 0.0, 1.0)))
+            let custom_shader = graphics::assets::custom_shader::CustomShader::new(vertex_data, texture_coords, &vertex_shader_src, &fragment_shader_src);
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), custom_shader.get_vertex_data(), custom_shader.get_texture_coords(), custom_shader.get_shader_program(), Vector3::zeros(), 0.0, 1.0, customobjecttextureid)))
         };
 
         self.add_object(newsquare);

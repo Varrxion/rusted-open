@@ -1,11 +1,11 @@
-use std::sync::{Arc, RwLock};
+use std::{ptr::null, sync::{Arc, RwLock}};
 
 use glfw::{Action, Context, Key};
 use nalgebra::{Matrix4, Vector3};
 
 use crate::engine::{events::movement::rotate_object, graphics};
 
-use super::{events::movement::move_object, graphics::{assets::base::graphics_object::Generic2DGraphicsObject, scenes::testscene, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::MasterIdGenerator}}, state::State};
+use super::{events::movement::move_object, graphics::{assets::base::graphics_object::Generic2DGraphicsObject, scenes::testscene, texture_manager::{self, TextureManager}, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::MasterIdGenerator}}, state::State};
 
 pub struct EventLoop {
     glfw: glfw::Glfw,
@@ -26,7 +26,7 @@ impl EventLoop {
 
         // Define multiple resolution options
         let resolutions = vec![
-            (3840, 2160), // 2160p
+            (3840, 2160), // 2160p, bugged? Cannot test
             (2560, 1440), // 1440p
             (1920, 1080), // 1080p
             (1280, 720),  // 720p
@@ -85,16 +85,24 @@ impl EventLoop {
     pub fn run_event_loop(&mut self) {  
         // Create the state to manage keys and other state
         let mut state = State::new();
+        let texture_manager = Arc::new(RwLock::new(TextureManager::new()));
+
+
+        let _ = texture_manager.write().unwrap().load_textures_from_directory("src\\engine\\graphics\\assets\\textures");
+
+        // Retrieve the texture ID for "BasicCharacter.png"
+        let texture_id = texture_manager.read().unwrap().get_texture_id("Yellow64xCharacter").unwrap(); // Use your method to get the texture ID
+
 
         let newsquare = {
             let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(self.master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(),basesquare.get_shader_program(), Vector3::zeros(), 0.0, 1.0)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(self.master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::zeros(), 0.0, 0.5, Some(texture_id))))
         };
     
         let newsquareid = self.master_graphics_list.add_object(newsquare);
 
         let mut sometestscene = testscene::TestScene::new();
-        sometestscene.initialize(self.master_id_generator.clone());
+        sometestscene.initialize(self.master_id_generator.clone(), texture_manager);
 
         self.master_graphics_list.load_scene(sometestscene.get_scene());
         drop(sometestscene);
@@ -138,7 +146,7 @@ impl EventLoop {
             let delta_time = self.master_clock.get_delta_time();
 
             // Apply movement based on active keys
-            let move_speed = 2.0;
+            let move_speed = 0.5;
             let rotation_speed = 2.0;
             if state.is_key_pressed(Key::W) {
                 move_object(square.clone(), Vector3::new(0.0, 1.0, 0.0), move_speed, delta_time);
