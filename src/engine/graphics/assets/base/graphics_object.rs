@@ -7,7 +7,7 @@ pub struct Generic2DGraphicsObject {
     id: u64,
     vertex_data: [f32; 8],
     texture_coords: [f32; 8],
-    vao: Arc<RwLock<VAO>>, // Wrap VAO in Arc<RwLock>
+    vao: Arc<RwLock<VAO>>,
     position_vbo: Arc<VBO>, // VBO for positions
     tex_vbo: Arc<VBO>, // VBO for texture coordinates
     shader_program: GLuint,
