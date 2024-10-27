@@ -1,8 +1,8 @@
-use std::sync::{Arc, RwLock};
+use std::{collections::HashSet, sync::{Arc, RwLock}};
 
 use nalgebra::Vector3;
 
-use crate::engine::graphics::{self, assets::base::graphics_object::Generic2DGraphicsObject, texture_manager::TextureManager, util::master_id_generator::MasterIdGenerator};
+use crate::engine::graphics::{self, assets::base::graphics_object::{CollisionMode, Generic2DGraphicsObject}, texture_manager::TextureManager, util::master_id_generator::MasterIdGenerator};
 
 use super::base::scene::Scene;
 
@@ -22,24 +22,28 @@ impl TestScene {
 
     pub fn initialize(&mut self, master_id_generator: Arc<RwLock<MasterIdGenerator>>, texture_manager: Arc<RwLock<TextureManager>>) {
 
+        let mut collision_modes = HashSet::new();
+        collision_modes.insert(CollisionMode::AABB);
+        collision_modes.insert(CollisionMode::Circle);
+
         let newsquaretextureid = texture_manager.read().unwrap().get_texture_id("FamiliarBlock");
 
         let newsquare = {
             let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(0.3, 0.0, 0.0), 0.0, 1.0, newsquaretextureid, true)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(0.3, 0.0, 0.0), 0.0, 1.0, newsquaretextureid, collision_modes.clone())))
         };
 
         let othersquaretextureid = texture_manager.read().unwrap().get_texture_id("BasicCharacterGreen");
 
         let othersquare = {
             let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(-0.3, 0.0, 0.0), 0.0, 1.0, othersquaretextureid, true)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(-0.3, 0.0, 0.0), 0.0, 1.0, othersquaretextureid, collision_modes.clone())))
         };
 
         // Vertex data
         let vertex_data: Vec<f32> = [
             // Positions (x, y)
-            0.3,  0.3,   // Top-right
+            0.25,  0.25,   // Top-right
             0.1, -0.1,   // Bottom-right
             -0.1, -0.1,   // Bottom-left
             -0.1,  0.1,   // Top-left
@@ -88,7 +92,7 @@ impl TestScene {
 
         let customobject = {
             let custom_shader = graphics::assets::custom_shader::CustomShader::new(vertex_data, texture_coords, &vertex_shader_src, &fragment_shader_src);
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), custom_shader.get_vertex_data(), custom_shader.get_texture_coords(), custom_shader.get_shader_program(), Vector3::zeros(), 0.0, 1.0, customobjecttextureid, true)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), custom_shader.get_vertex_data(), custom_shader.get_texture_coords(), custom_shader.get_shader_program(), Vector3::zeros(), 0.0, 1.0, customobjecttextureid, collision_modes)))
         };
 
         self.add_object(newsquare);
@@ -99,11 +103,6 @@ impl TestScene {
     // Add an object to the TestScene
     pub fn add_object(&mut self, obj: Arc<RwLock<Generic2DGraphicsObject>>) {
         self.scene.add_object(obj);
-    }
-
-    // Get the list of objects in the TestScene
-    pub fn get_objects(&self) -> &Vec<Arc<RwLock<Generic2DGraphicsObject>>> {
-        self.scene.get_objects()
     }
 
     pub fn get_scene(&self) -> &Scene {

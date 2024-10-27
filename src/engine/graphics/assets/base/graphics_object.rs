@@ -1,6 +1,6 @@
 use gl::types::GLuint;
 use nalgebra::{Matrix4, Vector3};
-use std::{ffi::CString, sync::{Arc, RwLock}};
+use std::{collections::HashSet, ffi::CString, sync::{Arc, RwLock}};
 use super::{vao::VAO, vbo::VBO};
 
 pub struct Generic2DGraphicsObject {
@@ -15,7 +15,7 @@ pub struct Generic2DGraphicsObject {
     rotation: f32,
     scale: f32,
     model_matrix: Matrix4<f32>,
-    has_collision: bool,
+    collision_modes: HashSet<CollisionMode>,
 }
 
 impl Clone for Generic2DGraphicsObject {
@@ -32,7 +32,7 @@ impl Clone for Generic2DGraphicsObject {
             rotation: self.rotation,
             scale: self.scale,
             model_matrix: self.model_matrix,
-            has_collision: self.has_collision,
+            collision_modes: self.collision_modes.clone(),
         }
     }
 }
@@ -49,7 +49,7 @@ impl Generic2DGraphicsObject {
         rotation: f32,
         scale: f32,
         texture_id: Option<GLuint>, // Accept texture ID as an argument
-        has_collision: bool,
+        collision_modes: HashSet<CollisionMode>,
     ) -> Self {
         let mut object = Self {
             id,
@@ -63,7 +63,7 @@ impl Generic2DGraphicsObject {
             rotation,
             scale,
             model_matrix: Matrix4::identity(), // Identity matrix for 2D
-            has_collision: has_collision,
+            collision_modes,
         };
         object.initialize(texture_id); // Pass texture ID to initialize
         object
@@ -156,10 +156,6 @@ impl Generic2DGraphicsObject {
     }
 
     pub fn is_colliding_aabb(&self, other: &Generic2DGraphicsObject) -> bool {
-        if !self.has_collision || !other.has_collision {
-            return false; // Ignore if collision is not enabled
-        }
-
         let (width_self, height_self) = self.dimensions();
         let (width_other, height_other) = other.dimensions();
 
@@ -185,46 +181,48 @@ impl Generic2DGraphicsObject {
         self_max_y > other_min_y
     }
 
-    pub fn is_colliding_circle(&self, other: &Generic2DGraphicsObject) -> bool {
-        if !self.has_collision || !other.has_collision {
-            return false; // Ignore if collision is not enabled
-        }
-    
-        // Calculate the maximum radius of the first object assuming it is centered at (0,0)
-        let radius_self = self.vertex_data.iter()
-            .enumerate()
-            .step_by(2) // Iterate over x-coordinates
-            .map(|(i, &x)| {
-                let y = self.vertex_data[i + 1]; // Corresponding y-coordinate
-                // Calculate distance from (0,0) to the vertex, scaled by the object’s scale
-                let distance = ((x.powi(2) + y.powi(2)).sqrt()) * self.scale;
-                distance
-            })
-            .fold(0.0, f32::max); // Maximum distance gives the effective radius
-    
-        // Calculate the maximum radius of the second object in the same way
-        let radius_other = other.vertex_data.iter()
-            .enumerate()
-            .step_by(2) // Iterate over x-coordinates
-            .map(|(i, &x)| {
-                let y = other.vertex_data[i + 1]; // Corresponding y-coordinate
-                // Calculate distance from (0,0) to the vertex, scaled by the other object’s scale
-                let distance = ((x.powi(2) + y.powi(2)).sqrt()) * other.scale;
-                distance
-            })
-            .fold(0.0, f32::max); // Maximum distance gives the effective radius
-    
-        // Calculate the distance between the centers
-        let dx = other.position.x - self.position.x; // Difference in x-coordinates
-        let dy = other.position.y - self.position.y; // Difference in y-coordinates
-        let distance_squared = dx * dx + dy * dy; // Distance squared between centers
-    
-        // Calculate the sum of the radii
+    fn is_colliding_circle(&self, other: &Generic2DGraphicsObject) -> bool {
+        let dx = other.position.x - self.position.x;
+        let dy = other.position.y - self.position.y;
+        let distance_squared = dx * dx + dy * dy;
+
+        let radius_self = self.get_radius();
+        let radius_other = other.get_radius();
+
         let radius_sum = radius_self + radius_other;
-    
-        // Check for collision using the squared values to avoid sqrt for performance
-        distance_squared < (radius_sum * radius_sum) // Collision if distance is less than sum of radii
-    }      
+        distance_squared < radius_sum * radius_sum
+    }
+
+    fn get_radius(&self) -> f32 {
+        self.vertex_data
+            .chunks(2)
+            .map(|v| (v[0].powi(2) + v[1].powi(2)).sqrt() * self.scale)
+            .fold(0.0, f32::max)
+    }
+
+    fn is_colliding_obb(&self, other: &Generic2DGraphicsObject) -> bool {
+        // Implement OBB collision logic here
+        unimplemented!("OBB collision not yet implemented");
+    }  
+
+    // Check for collision with another object
+    pub fn is_colliding(&self, other: &Generic2DGraphicsObject) -> bool {
+        for mode in &self.collision_modes {
+            if other.collision_modes.contains(mode) && self.check_collision(other, *mode) {
+                return true;
+            }
+        }
+        false
+    }
+
+    // Helper to perform the appropriate collision check
+    fn check_collision(&self, other: &Generic2DGraphicsObject, mode: CollisionMode) -> bool {
+        match mode {
+            CollisionMode::AABB => self.is_colliding_aabb(other),
+            CollisionMode::Circle => self.is_colliding_circle(other),
+            CollisionMode::OBB => self.is_colliding_obb(other),
+        }
+    }
 
     pub fn get_id(&self) -> u64 {
         self.id
@@ -257,4 +255,11 @@ impl Generic2DGraphicsObject {
     pub fn get_scale(&self) -> f32 {
         self.scale
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CollisionMode {
+    AABB,
+    Circle,
+    OBB,
 }

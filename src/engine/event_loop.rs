@@ -1,11 +1,11 @@
-use std::sync::{Arc, RwLock};
+use std::{collections::HashSet, sync::{Arc, RwLock}};
 
 use glfw::{Action, Context, GlfwReceiver, Key, WindowEvent};
 use nalgebra::{Matrix4, Vector3};
 
 use crate::engine::{events::{collision, movement::rotate_object}, graphics};
 
-use super::{events::movement::move_object, graphics::{assets::base::graphics_object::Generic2DGraphicsObject, texture_manager::TextureManager, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::MasterIdGenerator}}, scenes::testscene::TestScene, state::State};
+use super::{events::movement::move_object, graphics::{assets::base::graphics_object::{CollisionMode, Generic2DGraphicsObject}, texture_manager::TextureManager, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::MasterIdGenerator}}, scenes::testscene::TestScene, state::State};
 
 pub struct EventLoop {
     glfw: glfw::Glfw,
@@ -90,10 +90,13 @@ impl EventLoop {
         // Retrieve the texture ID for "BasicCharacter.png"
         let texture_id = texture_manager.read().unwrap().get_texture_id("Yellow64xCharacter").unwrap(); // Use your method to get the texture ID
 
+        let mut player_collision_modes = HashSet::new();
+        player_collision_modes.insert(CollisionMode::AABB);
+        player_collision_modes.insert(CollisionMode::Circle);
 
         let newsquare = {
             let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(self.master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::zeros(), 0.0, 1.0, Some(texture_id), true)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(self.master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::zeros(), 0.0, 1.0, Some(texture_id), player_collision_modes)))
         };
     
         let newsquareid = self.master_graphics_list.add_object(newsquare);
@@ -178,7 +181,11 @@ impl EventLoop {
             }
 
             // Call the collision checking method
-            collision::check_collisions(&self.master_graphics_list, newsquareid);
+            let collision_events = collision::check_collisions(&self.master_graphics_list, newsquareid);
+
+            for event in collision_events {
+                println!("Collision detected between Object ID {} and Object ID {}", event.object_id_1, event.object_id_2);
+            }
 
 
             // Render here
