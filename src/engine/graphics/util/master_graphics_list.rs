@@ -1,17 +1,17 @@
 use std::{collections::HashMap, sync::{Arc, RwLock}};
 use nalgebra::Matrix4;
 
-use crate::engine::graphics::{assets::base::graphics_object::Generic2DGraphicsObject, scenes::base::scene::Scene};
+use crate::engine::{graphics::assets::base::graphics_object::Generic2DGraphicsObject, scenes::base::scene::Scene};
 
 pub struct MasterGraphicsList {
-    objects: RwLock<HashMap<u64, Arc<RwLock<Generic2DGraphicsObject>>>>,
+    objects: Arc<RwLock<HashMap<u64, Arc<RwLock<Generic2DGraphicsObject>>>>>,
 }
 
 impl MasterGraphicsList {
     // Initialize a new MasterGraphicsList
     pub fn new() -> Self {
         MasterGraphicsList {
-            objects: RwLock::new(HashMap::new()),
+            objects: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -37,11 +37,15 @@ impl MasterGraphicsList {
         }
     }
 
-
     // Get an object by ID
     pub fn get_object(&self, id: u64) -> Option<Arc<RwLock<Generic2DGraphicsObject>>> {
         let objects = self.objects.read().unwrap();
         objects.get(&id).cloned()
+    }
+
+    // Returns a pointer to the entire object list
+    pub fn read_only_objects(&self) -> Arc<RwLock<HashMap<u64, Arc<RwLock<Generic2DGraphicsObject>>>>> {
+        Arc::clone(&self.objects) // Return a clone of the Arc to allow shared access
     }
 
     // Draw all objects in the list

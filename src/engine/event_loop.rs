@@ -3,9 +3,9 @@ use std::{ptr::null, sync::{Arc, RwLock}};
 use glfw::{Action, Context, Key};
 use nalgebra::{Matrix4, Vector3};
 
-use crate::engine::{events::movement::rotate_object, graphics};
+use crate::engine::{events::{collision, movement::rotate_object}, graphics};
 
-use super::{events::movement::move_object, graphics::{assets::base::graphics_object::Generic2DGraphicsObject, scenes::testscene, texture_manager::{self, TextureManager}, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::MasterIdGenerator}}, state::State};
+use super::{events::movement::move_object, graphics::{assets::base::graphics_object::Generic2DGraphicsObject, texture_manager::{self, TextureManager}, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::MasterIdGenerator}}, scenes::testscene::TestScene, state::State};
 
 pub struct EventLoop {
     glfw: glfw::Glfw,
@@ -22,7 +22,6 @@ pub struct EventLoop {
 impl EventLoop {
     pub fn new() -> Self {
         let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-
 
         // Define multiple resolution options
         let resolutions = vec![
@@ -80,8 +79,6 @@ impl EventLoop {
         Matrix4::new_orthographic(-1.0, 1.0, -1.0 / aspect_ratio, 1.0 / aspect_ratio, -1.0, 1.0)
     }
     
-    
-
     pub fn run_event_loop(&mut self) {  
         // Create the state to manage keys and other state
         let mut state = State::new();
@@ -101,7 +98,7 @@ impl EventLoop {
     
         let newsquareid = self.master_graphics_list.add_object(newsquare);
 
-        let mut sometestscene = testscene::TestScene::new();
+        let mut sometestscene = TestScene::new();
         sometestscene.initialize(self.master_id_generator.clone(), texture_manager);
 
         self.master_graphics_list.load_scene(sometestscene.get_scene());
@@ -146,7 +143,7 @@ impl EventLoop {
             let delta_time = self.master_clock.get_delta_time();
 
             // Apply movement based on active keys
-            let move_speed = 0.5;
+            let move_speed = 0.2;
             let rotation_speed = 2.0;
             if state.is_key_pressed(Key::W) {
                 move_object(square.clone(), Vector3::new(0.0, 1.0, 0.0), move_speed, delta_time);
@@ -171,34 +168,18 @@ impl EventLoop {
             //let debugpos = square.read().unwrap().get_position();
             //println!("{}", debugpos);
 
-            if let Some(object_1) = self.master_graphics_list.get_object(newsquareid) {
-                if let Some(object_2) = self.master_graphics_list.get_object(4) {
-                    let object_1_read = object_1.read().unwrap(); // Access the object through RwLock
-                    let object_2_read = object_2.read().unwrap(); // Read the `newsquare` object
-                    
-                    if object_1_read.is_colliding_aabb(&object_2_read) {
-                        println!("AABB Collision detected!");
-                    } else {
-                        println!("No collision.");
-                    }
-
-                    if object_1_read.is_colliding_circle(&object_2_read) {
-                        println!("Circle Collision detected!");
-                    } else {
-                        println!("No collision.");
-                    }
-
-                    if object_1_read.is_colliding_obb(&object_2_read) {
-                        println!("OBB Collision detected!");
-                    } else {
-                        println!("No collision.");
-                    }
-
-                } else {
-                    println!("No object found with ID 3.");
-                }
+            //spin this object for testing
+            if let Some(object_2) = self.master_graphics_list.get_object(4) {
+                let mut object_2_read = object_2.write().unwrap(); // Read the `newsquare` object
+                let rotfactor = object_2_read.get_rotation()+1.0*delta_time;
+                object_2_read.set_rotation(rotfactor);
+            } else {
+                println!("No object found with ID 4.");
             }
-            
+
+            // Call the collision checking method
+            collision::check_collisions(&self.master_graphics_list, newsquareid);
+
 
             // Render here
             unsafe {

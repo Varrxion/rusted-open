@@ -127,25 +127,60 @@ impl Generic2DGraphicsObject {
         }
     }
 
+    // Method to calculate width and height based on vertex data
+    fn dimensions(&self) -> (f32, f32) {
+        let min_x = self.vertex_data.iter()
+            .step_by(2) // Take x-coordinates
+            .cloned()
+            .fold(f32::INFINITY, f32::min);
+        
+        let max_x = self.vertex_data.iter()
+            .step_by(2) // Take x-coordinates
+            .cloned()
+            .fold(f32::NEG_INFINITY, f32::max);
+        
+        let min_y = self.vertex_data.iter()
+            .skip(1) // Take y-coordinates
+            .step_by(2) // Skip every other (x)
+            .cloned()
+            .fold(f32::INFINITY, f32::min);
+        
+        let max_y = self.vertex_data.iter()
+            .skip(1) // Take y-coordinates
+            .step_by(2) // Skip every other (x)
+            .cloned()
+            .fold(f32::NEG_INFINITY, f32::max);
+        
+        let width = (max_x - min_x) * self.scale;
+        let height = (max_y - min_y) * self.scale;
+        
+        (width, height)
+    }
+
     pub fn is_colliding_aabb(&self, other: &Generic2DGraphicsObject) -> bool {
-        // Only check collision if both objects are marked for collision
         if !self.has_collision || !other.has_collision {
-            return false;
+            return false; // Ignore if collision is not enabled
         }
-    
-        let half_width_self = self.scale / 2.0;
-        let half_width_other = other.scale / 2.0;
-    
+
+        let (width_self, height_self) = self.dimensions();
+        let (width_other, height_other) = other.dimensions();
+
+        let half_width_self = width_self / 2.0;
+        let half_height_self = height_self / 2.0;
+
+        let half_width_other = width_other / 2.0;
+        let half_height_other = height_other / 2.0;
+
         let self_min_x = self.position.x - half_width_self;
         let self_max_x = self.position.x + half_width_self;
-        let self_min_y = self.position.y - half_width_self;
-        let self_max_y = self.position.y + half_width_self;
-    
+        let self_min_y = self.position.y - half_height_self;
+        let self_max_y = self.position.y + half_height_self;
+
         let other_min_x = other.position.x - half_width_other;
         let other_max_x = other.position.x + half_width_other;
-        let other_min_y = other.position.y - half_width_other;
-        let other_max_y = other.position.y + half_width_other;
-    
+        let other_min_y = other.position.y - half_height_other;
+        let other_max_y = other.position.y + half_height_other;
+
         self_min_x < other_max_x &&
         self_max_x > other_min_x &&
         self_min_y < other_max_y &&
@@ -154,86 +189,44 @@ impl Generic2DGraphicsObject {
 
     pub fn is_colliding_circle(&self, other: &Generic2DGraphicsObject) -> bool {
         if !self.has_collision || !other.has_collision {
-            return false;
+            return false; // Ignore if collision is not enabled
         }
     
-        let distance = (self.position - other.position).magnitude();
-        let combined_radius = self.scale / 2.0 + other.scale / 2.0;
+        // Calculate the maximum radius of the first object assuming it is centered at (0,0)
+        let radius_self = self.vertex_data.iter()
+            .enumerate()
+            .step_by(2) // Iterate over x-coordinates
+            .map(|(i, &x)| {
+                let y = self.vertex_data[i + 1]; // Corresponding y-coordinate
+                // Calculate distance from (0,0) to the vertex, scaled by the object’s scale
+                let distance = ((x.powi(2) + y.powi(2)).sqrt()) * self.scale;
+                distance
+            })
+            .fold(0.0, f32::max); // Maximum distance gives the effective radius
     
-        distance < combined_radius
-    }
+        // Calculate the maximum radius of the second object in the same way
+        let radius_other = other.vertex_data.iter()
+            .enumerate()
+            .step_by(2) // Iterate over x-coordinates
+            .map(|(i, &x)| {
+                let y = other.vertex_data[i + 1]; // Corresponding y-coordinate
+                // Calculate distance from (0,0) to the vertex, scaled by the other object’s scale
+                let distance = ((x.powi(2) + y.powi(2)).sqrt()) * other.scale;
+                distance
+            })
+            .fold(0.0, f32::max); // Maximum distance gives the effective radius
     
-    pub fn is_colliding_obb(&self, other: &Generic2DGraphicsObject) -> bool {
-        if !self.has_collision || !other.has_collision {
-            return false;
-        }
+        // Calculate the distance between the centers
+        let dx = other.position.x - self.position.x; // Difference in x-coordinates
+        let dy = other.position.y - self.position.y; // Difference in y-coordinates
+        let distance_squared = dx * dx + dy * dy; // Distance squared between centers
     
-        let axes = [
-            Vector3::new(1.0, 0.0, 0.0),
-            Vector3::new(0.0, 1.0, 0.0),
-            Vector3::new(1.0, 0.0, 0.0),
-            Vector3::new(0.0, 1.0, 0.0),
-        ];
+        // Calculate the sum of the radii
+        let radius_sum = radius_self + radius_other;
     
-        let self_corners = self.get_corners();
-        let other_corners = other.get_corners();
-    
-        for axis in axes.iter() {
-            let (min1, max1) = Self::project_obb(&self_corners, axis);
-            let (min2, max2) = Self::project_obb(&other_corners, axis);
-    
-            if !Self::is_overlapping(min1, max1, min2, max2) {
-                return false;
-            }
-        }
-    
-        true
-    }
-
-    fn get_corners(&self) -> [Vector3<f32>; 4] {
-        let half_scale = self.scale / 2.0;
-    
-        // Define the four corners in local space (centered around origin)
-        let local_corners = [
-            Vector3::new(-half_scale, -half_scale, 0.0),
-            Vector3::new(half_scale, -half_scale, 0.0),
-            Vector3::new(half_scale, half_scale, 0.0),
-            Vector3::new(-half_scale, half_scale, 0.0),
-        ];
-    
-        // Create rotation matrix
-        let rotation_matrix = Matrix4::new_rotation(Vector3::z() * self.rotation);
-    
-        // Transform corners to world space
-        local_corners.map(|corner| {
-            // Rotate the corner vector
-            let rotated = rotation_matrix.transform_vector(&corner);
-            // Translate the rotated corner to the object's position
-            self.position + rotated
-        })
-    }
-    
-
-    fn project_obb(corners: &[Vector3<f32>; 4], axis: &Vector3<f32>) -> (f32, f32) {
-        let mut min = f32::MAX;
-        let mut max = f32::MIN;
-    
-        for corner in corners.iter() {
-            let projection = Self::project_point(corner, axis);
-            min = min.min(projection);
-            max = max.max(projection);
-        }
-    
-        (min, max)
-    }
-
-    fn project_point(point: &Vector3<f32>, axis: &Vector3<f32>) -> f32 {
-        point.dot(axis) / axis.norm() // Dot product and normalize axis
-    }
-
-    fn is_overlapping(min1: f32, max1: f32, min2: f32, max2: f32) -> bool {
-        max1 >= min2 && max2 >= min1
-    }        
+        // Check for collision using the squared values to avoid sqrt for performance
+        distance_squared < (radius_sum * radius_sum) // Collision if distance is less than sum of radii
+    }      
 
     pub fn get_id(&self) -> u64 {
         self.id

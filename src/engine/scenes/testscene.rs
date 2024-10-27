@@ -26,20 +26,20 @@ impl TestScene {
 
         let newsquare = {
             let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(0.3, 0.0, 0.0), 0.0, 1.0, newsquaretextureid, false)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(0.3, 0.0, 0.0), 0.0, 1.0, newsquaretextureid, true)))
         };
 
         let othersquaretextureid = texture_manager.read().unwrap().get_texture_id("BasicCharacterGreen");
 
         let othersquare = {
             let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(-0.3, 0.0, 0.0), 0.0, 1.0, othersquaretextureid, false)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(-0.3, 0.0, 0.0), 0.0, 1.0, othersquaretextureid, true)))
         };
 
         // Vertex data
         let vertex_data: [f32; 8] = [
             // Positions (x, y)
-            0.1,  0.1,   // Top-right
+            0.3,  0.3,   // Top-right
             0.1, -0.1,   // Bottom-right
             -0.1, -0.1,   // Bottom-left
             -0.1,  0.1,   // Top-left
