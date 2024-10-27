@@ -96,7 +96,7 @@ impl EventLoop {
 
         let newsquare = {
             let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(self.master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::zeros(), 0.0, 0.5, Some(texture_id))))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(self.master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::zeros(), 0.0, 1.0, Some(texture_id), true)))
         };
     
         let newsquareid = self.master_graphics_list.add_object(newsquare);
@@ -167,8 +167,38 @@ impl EventLoop {
                 rotate_object(square.clone(), -rotation_speed*delta_time);
             }
 
-            let debugpos = square.read().unwrap().get_position();
-            println!("{}", debugpos);
+            //position debug info
+            //let debugpos = square.read().unwrap().get_position();
+            //println!("{}", debugpos);
+
+            if let Some(object_1) = self.master_graphics_list.get_object(newsquareid) {
+                if let Some(object_2) = self.master_graphics_list.get_object(4) {
+                    let object_1_read = object_1.read().unwrap(); // Access the object through RwLock
+                    let object_2_read = object_2.read().unwrap(); // Read the `newsquare` object
+                    
+                    if object_1_read.is_colliding_aabb(&object_2_read) {
+                        println!("AABB Collision detected!");
+                    } else {
+                        println!("No collision.");
+                    }
+
+                    if object_1_read.is_colliding_circle(&object_2_read) {
+                        println!("Circle Collision detected!");
+                    } else {
+                        println!("No collision.");
+                    }
+
+                    if object_1_read.is_colliding_obb(&object_2_read) {
+                        println!("OBB Collision detected!");
+                    } else {
+                        println!("No collision.");
+                    }
+
+                } else {
+                    println!("No object found with ID 3.");
+                }
+            }
+            
 
             // Render here
             unsafe {

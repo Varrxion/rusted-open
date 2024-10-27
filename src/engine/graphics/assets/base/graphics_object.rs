@@ -15,6 +15,7 @@ pub struct Generic2DGraphicsObject {
     rotation: f32,
     scale: f32,
     model_matrix: Matrix4<f32>,
+    has_collision: bool,
 }
 
 impl Clone for Generic2DGraphicsObject {
@@ -31,6 +32,7 @@ impl Clone for Generic2DGraphicsObject {
             rotation: self.rotation,
             scale: self.scale,
             model_matrix: self.model_matrix,
+            has_collision: self.has_collision,
         }
     }
 }
@@ -47,6 +49,7 @@ impl Generic2DGraphicsObject {
         rotation: f32,
         scale: f32,
         texture_id: Option<GLuint>, // Accept texture ID as an argument
+        has_collision: bool,
     ) -> Self {
         let mut object = Self {
             id,
@@ -60,6 +63,7 @@ impl Generic2DGraphicsObject {
             rotation,
             scale,
             model_matrix: Matrix4::identity(), // Identity matrix for 2D
+            has_collision: has_collision,
         };
         object.initialize(texture_id); // Pass texture ID to initialize
         object
@@ -122,6 +126,114 @@ impl Generic2DGraphicsObject {
             VAO::unbind();
         }
     }
+
+    pub fn is_colliding_aabb(&self, other: &Generic2DGraphicsObject) -> bool {
+        // Only check collision if both objects are marked for collision
+        if !self.has_collision || !other.has_collision {
+            return false;
+        }
+    
+        let half_width_self = self.scale / 2.0;
+        let half_width_other = other.scale / 2.0;
+    
+        let self_min_x = self.position.x - half_width_self;
+        let self_max_x = self.position.x + half_width_self;
+        let self_min_y = self.position.y - half_width_self;
+        let self_max_y = self.position.y + half_width_self;
+    
+        let other_min_x = other.position.x - half_width_other;
+        let other_max_x = other.position.x + half_width_other;
+        let other_min_y = other.position.y - half_width_other;
+        let other_max_y = other.position.y + half_width_other;
+    
+        self_min_x < other_max_x &&
+        self_max_x > other_min_x &&
+        self_min_y < other_max_y &&
+        self_max_y > other_min_y
+    }
+
+    pub fn is_colliding_circle(&self, other: &Generic2DGraphicsObject) -> bool {
+        if !self.has_collision || !other.has_collision {
+            return false;
+        }
+    
+        let distance = (self.position - other.position).magnitude();
+        let combined_radius = self.scale / 2.0 + other.scale / 2.0;
+    
+        distance < combined_radius
+    }
+    
+    pub fn is_colliding_obb(&self, other: &Generic2DGraphicsObject) -> bool {
+        if !self.has_collision || !other.has_collision {
+            return false;
+        }
+    
+        let axes = [
+            Vector3::new(1.0, 0.0, 0.0),
+            Vector3::new(0.0, 1.0, 0.0),
+            Vector3::new(1.0, 0.0, 0.0),
+            Vector3::new(0.0, 1.0, 0.0),
+        ];
+    
+        let self_corners = self.get_corners();
+        let other_corners = other.get_corners();
+    
+        for axis in axes.iter() {
+            let (min1, max1) = Self::project_obb(&self_corners, axis);
+            let (min2, max2) = Self::project_obb(&other_corners, axis);
+    
+            if !Self::is_overlapping(min1, max1, min2, max2) {
+                return false;
+            }
+        }
+    
+        true
+    }
+
+    fn get_corners(&self) -> [Vector3<f32>; 4] {
+        let half_scale = self.scale / 2.0;
+    
+        // Define the four corners in local space (centered around origin)
+        let local_corners = [
+            Vector3::new(-half_scale, -half_scale, 0.0),
+            Vector3::new(half_scale, -half_scale, 0.0),
+            Vector3::new(half_scale, half_scale, 0.0),
+            Vector3::new(-half_scale, half_scale, 0.0),
+        ];
+    
+        // Create rotation matrix
+        let rotation_matrix = Matrix4::new_rotation(Vector3::z() * self.rotation);
+    
+        // Transform corners to world space
+        local_corners.map(|corner| {
+            // Rotate the corner vector
+            let rotated = rotation_matrix.transform_vector(&corner);
+            // Translate the rotated corner to the object's position
+            self.position + rotated
+        })
+    }
+    
+
+    fn project_obb(corners: &[Vector3<f32>; 4], axis: &Vector3<f32>) -> (f32, f32) {
+        let mut min = f32::MAX;
+        let mut max = f32::MIN;
+    
+        for corner in corners.iter() {
+            let projection = Self::project_point(corner, axis);
+            min = min.min(projection);
+            max = max.max(projection);
+        }
+    
+        (min, max)
+    }
+
+    fn project_point(point: &Vector3<f32>, axis: &Vector3<f32>) -> f32 {
+        point.dot(axis) / axis.norm() // Dot product and normalize axis
+    }
+
+    fn is_overlapping(min1: f32, max1: f32, min2: f32, max2: f32) -> bool {
+        max1 >= min2 && max2 >= min1
+    }        
 
     pub fn get_id(&self) -> u64 {
         self.id

@@ -26,14 +26,14 @@ impl TestScene {
 
         let newsquare = {
             let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(0.3, 0.0, 0.0), 0.0, 1.0, newsquaretextureid)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(0.3, 0.0, 0.0), 0.0, 1.0, newsquaretextureid, false)))
         };
 
         let othersquaretextureid = texture_manager.read().unwrap().get_texture_id("BasicCharacterGreen");
 
         let othersquare = {
             let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(-0.3, 0.0, 0.0), 0.0, 1.0, othersquaretextureid)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::new(-0.3, 0.0, 0.0), 0.0, 1.0, othersquaretextureid, false)))
         };
 
         // Vertex data
@@ -88,7 +88,7 @@ impl TestScene {
 
         let customobject = {
             let custom_shader = graphics::assets::custom_shader::CustomShader::new(vertex_data, texture_coords, &vertex_shader_src, &fragment_shader_src);
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), custom_shader.get_vertex_data(), custom_shader.get_texture_coords(), custom_shader.get_shader_program(), Vector3::zeros(), 0.0, 1.0, customobjecttextureid)))
+            Arc::new(RwLock::new(Generic2DGraphicsObject::new(master_id_generator.write().unwrap().generate_id(), custom_shader.get_vertex_data(), custom_shader.get_texture_coords(), custom_shader.get_shader_program(), Vector3::zeros(), 0.0, 1.0, customobjecttextureid, true)))
         };
 
         self.add_object(newsquare);
