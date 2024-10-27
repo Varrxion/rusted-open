@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use glfw::{Action, Context, Key};
+use glfw::{Action, Context, GlfwReceiver, Key, WindowEvent};
 use nalgebra::{Matrix4, Vector3};
 
 use crate::engine::{events::{collision, movement::rotate_object}, graphics};
@@ -9,8 +9,8 @@ use super::{events::movement::move_object, graphics::{assets::base::graphics_obj
 
 pub struct EventLoop {
     glfw: glfw::Glfw,
-    window: glfw::Window,
-    events: std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>,
+    window: glfw::PWindow,
+    events: GlfwReceiver<(f64, WindowEvent)>,
     master_graphics_list: MasterGraphicsList,
     master_id_generator: Arc<RwLock<MasterIdGenerator>>,
     master_clock: master_clock::MasterClock,
@@ -21,7 +21,7 @@ pub struct EventLoop {
 
 impl EventLoop {
     pub fn new() -> Self {
-        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+        let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
 
         // Define multiple resolution options
         let resolutions = vec![

@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-glfw = "0.50"
+glfw = "0.58"
 gl = "0.14.0"
-bytemuck = "1.18.0"
-nalgebra = "0.30"
+bytemuck = "1.19.0"
+nalgebra = "0.33.1"
 image = "0.25.4"
