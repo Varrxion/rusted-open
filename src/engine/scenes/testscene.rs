@@ -1,8 +1,8 @@
 use std::sync::{Arc, RwLock};
 
-use nalgebra::{base, Vector3};
+use nalgebra::Vector3;
 
-use crate::engine::graphics::{self, assets::{base::graphics_object::Generic2DGraphicsObject, custom_shader}, texture_manager::TextureManager, util::master_id_generator::{self, MasterIdGenerator}};
+use crate::engine::graphics::{self, assets::base::graphics_object::Generic2DGraphicsObject, texture_manager::TextureManager, util::master_id_generator::MasterIdGenerator};
 
 use super::base::scene::Scene;
 

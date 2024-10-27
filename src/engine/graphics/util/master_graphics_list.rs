@@ -60,7 +60,6 @@ impl MasterGraphicsList {
         }
     }
     
-    
     // Remove an object by ID
     pub fn remove_object(&self, id: u64) {
         let mut objects = self.objects.write().unwrap();

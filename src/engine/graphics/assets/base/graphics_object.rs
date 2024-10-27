@@ -1,4 +1,4 @@
-use gl::types::{GLfloat, GLint, GLuint};
+use gl::types::GLuint;
 use nalgebra::{Matrix4, Vector3};
 use std::{ffi::CString, sync::{Arc, RwLock}};
 use super::{vao::VAO, vbo::VBO};

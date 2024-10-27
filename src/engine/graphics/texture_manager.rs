@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
 use gl::types::{GLint, GLsizei, GLuint};
 use image::{self, GenericImageView}; // Ensure you have this crate in your Cargo.toml
 

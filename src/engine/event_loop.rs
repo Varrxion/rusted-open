@@ -1,11 +1,11 @@
-use std::{ptr::null, sync::{Arc, RwLock}};
+use std::sync::{Arc, RwLock};
 
 use glfw::{Action, Context, Key};
 use nalgebra::{Matrix4, Vector3};
 
 use crate::engine::{events::{collision, movement::rotate_object}, graphics};
 
-use super::{events::movement::move_object, graphics::{assets::base::graphics_object::Generic2DGraphicsObject, texture_manager::{self, TextureManager}, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::MasterIdGenerator}}, scenes::testscene::TestScene, state::State};
+use super::{events::movement::move_object, graphics::{assets::base::graphics_object::Generic2DGraphicsObject, texture_manager::TextureManager, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::MasterIdGenerator}}, scenes::testscene::TestScene, state::State};
 
 pub struct EventLoop {
     glfw: glfw::Glfw,
