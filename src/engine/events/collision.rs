@@ -5,7 +5,7 @@ pub fn check_collisions(master_graphics_list: &MasterGraphicsList, object_id: u6
         let object_1_read = object_1.read().unwrap(); // Access the object through RwLock
 
         // Iterate over all objects in the MasterGraphicsList
-        let all_objects = master_graphics_list.read_only_objects(); // Get the read-only reference
+        let all_objects = master_graphics_list.get_objects(); // Get the read-only reference
         for (id, object_2) in all_objects.read().unwrap().iter() {
             // Skip the object being checked against itself
             if *id == object_id {

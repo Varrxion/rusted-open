@@ -44,7 +44,7 @@ impl MasterGraphicsList {
     }
 
     // Returns a pointer to the entire object list
-    pub fn read_only_objects(&self) -> Arc<RwLock<HashMap<u64, Arc<RwLock<Generic2DGraphicsObject>>>>> {
+    pub fn get_objects(&self) -> Arc<RwLock<HashMap<u64, Arc<RwLock<Generic2DGraphicsObject>>>>> {
         Arc::clone(&self.objects) // Return a clone of the Arc to allow shared access
     }
 

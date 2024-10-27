@@ -5,8 +5,8 @@ use super::{vao::VAO, vbo::VBO};
 
 pub struct Generic2DGraphicsObject {
     id: u64,
-    vertex_data: [f32; 8],
-    texture_coords: [f32; 8],
+    vertex_data: Vec<f32>,
+    texture_coords: Vec<f32>,
     vao: Arc<RwLock<VAO>>,
     position_vbo: Arc<VBO>, // VBO for positions
     tex_vbo: Arc<VBO>, // VBO for texture coordinates
@@ -42,8 +42,8 @@ impl Generic2DGraphicsObject {
 
     pub fn new(
         id: u64,
-        vertex_data: [f32; 8],
-        texture_coords: [f32; 8],
+        vertex_data: Vec<f32>,
+        texture_coords: Vec<f32>,
         shader_program: GLuint,
         position: Vector3<f32>,
         rotation: f32,
@@ -71,23 +71,21 @@ impl Generic2DGraphicsObject {
 
     fn initialize(&mut self, texture_id: Option<GLuint>) {
         let mut vao = self.vao.write().unwrap(); // Lock the RwLock for mutable access
-        unsafe {
-            // Bind the VAO
-            vao.bind();
+        // Bind the VAO
+        vao.bind();
 
-            // Initialize the VBOs with vertex data and texture coordinates
-            self.position_vbo = Arc::new(VBO::new(&self.vertex_data)); // Initialize position VBO
-            self.tex_vbo = Arc::new(VBO::new(&self.texture_coords)); // Initialize texture VBO
+        // Initialize the VBOs with vertex data and texture coordinates
+        self.position_vbo = Arc::new(VBO::new(&self.vertex_data)); // Initialize position VBO
+        self.tex_vbo = Arc::new(VBO::new(&self.texture_coords)); // Initialize texture VBO
 
-            // Setup vertex attributes for the VAO
-            vao.setup_vertex_attributes(vec![
-                (self.position_vbo.id(), 2, 0), // Position VBO
-                (self.tex_vbo.id(), 2, 1),       // Texture coordinate VBO
-            ], texture_id); // Pass texture ID dynamically
+        // Setup vertex attributes for the VAO
+        vao.setup_vertex_attributes(vec![
+            (self.position_vbo.id(), 2, 0), // Position VBO
+            (self.tex_vbo.id(), 2, 1),       // Texture coordinate VBO
+        ], texture_id); // Pass texture ID dynamically
 
-            // Unbind the VAO
-            VAO::unbind();
-        }
+        // Unbind the VAO
+        VAO::unbind();
     }
 
     // Apply translation, rotation, and scale as a combined transform
