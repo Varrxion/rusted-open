@@ -4,7 +4,7 @@ use std::{collections::HashSet, ffi::CString, sync::{Arc, RwLock}};
 use super::{vao::VAO, vbo::VBO};
 
 pub struct Generic2DGraphicsObject {
-    id: u64,
+    name: String,
     vertex_data: Vec<f32>,
     texture_coords: Vec<f32>,
     vao: Arc<RwLock<VAO>>,
@@ -21,7 +21,7 @@ pub struct Generic2DGraphicsObject {
 impl Clone for Generic2DGraphicsObject {
     fn clone(&self) -> Self {
         Generic2DGraphicsObject {
-            id: self.id,
+            name: self.name.clone(),
             vertex_data: self.vertex_data.clone(),
             texture_coords: self.texture_coords.clone(),
             vao: Arc::clone(&self.vao),
@@ -41,7 +41,7 @@ impl Generic2DGraphicsObject {
     const FULL_ROTATION: f32 = 2.0 * std::f32::consts::PI; // 360 degrees in radians
 
     pub fn new(
-        id: u64,
+        name: String,
         vertex_data: Vec<f32>,
         texture_coords: Vec<f32>,
         shader_program: GLuint,
@@ -52,7 +52,7 @@ impl Generic2DGraphicsObject {
         collision_modes: HashSet<CollisionMode>,
     ) -> Self {
         let mut object = Self {
-            id,
+            name,
             vertex_data,
             texture_coords,
             vao: Arc::new(RwLock::new(VAO::new())), // Create a new VAO wrapped in RwLock
@@ -224,8 +224,8 @@ impl Generic2DGraphicsObject {
         }
     }
 
-    pub fn get_id(&self) -> u64 {
-        self.id
+    pub fn get_name(&self) -> &str {
+        &self.name
     }
 
     pub fn set_position(&mut self, position: nalgebra::Vector3<f32>) {
@@ -254,6 +254,21 @@ impl Generic2DGraphicsObject {
 
     pub fn get_scale(&self) -> f32 {
         self.scale
+    }
+
+    pub fn print_debug(&self) {
+        println!("Debug Info for Generic2DGraphicsObject:");
+        println!("Name: {}", self.name);
+        println!("Vertex Data: {:?}", self.vertex_data);
+        println!("Texture Coordinates: {:?}", self.texture_coords);
+        println!("Shader Program: {}", self.shader_program);
+        println!("Position: {:?}", self.position);
+        println!("Rotation: {}", self.rotation);
+        println!("Scale: {}", self.scale);
+        println!("Model Matrix: {:?}", self.model_matrix);
+        println!("Collision Modes: {:?}", self.collision_modes);
+        println!("Position VBO ID: {}", self.position_vbo.id());
+        println!("Texture VBO ID: {}\n", self.tex_vbo.id());
     }
 }
 

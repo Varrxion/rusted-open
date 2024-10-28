@@ -1,10 +1,10 @@
 use std::{collections::HashMap, sync::{Arc, RwLock}};
 use nalgebra::Matrix4;
 
-use crate::engine::{graphics::assets::base::graphics_object::Generic2DGraphicsObject, scenes::base::scene::Scene};
+use crate::engine::{graphics::internal_object::graphics_object::Generic2DGraphicsObject, scenes::scene::Scene};
 
 pub struct MasterGraphicsList {
-    objects: Arc<RwLock<HashMap<u64, Arc<RwLock<Generic2DGraphicsObject>>>>>,
+    objects: Arc<RwLock<HashMap<String, Arc<RwLock<Generic2DGraphicsObject>>>>>, // Change key type to String
 }
 
 impl MasterGraphicsList {
@@ -15,36 +15,32 @@ impl MasterGraphicsList {
         }
     }
 
-    // Add an object to the list and return its ID
-    pub fn add_object(&self, obj: Arc<RwLock<Generic2DGraphicsObject>>) -> u64 {
-        let id = obj.read().unwrap().get_id();
+    // Add an object to the list using its name as the key
+    pub fn add_object(&self, obj: Arc<RwLock<Generic2DGraphicsObject>>) {
+        let binding = obj.read().unwrap();
+        let name = binding.get_name();
         let mut objects = self.objects.write().unwrap();
-        objects.insert(id, obj);
-        id
+        objects.insert(name.to_owned(), obj.clone());
     }
+    
 
     // Add multiple objects from a Scene to the MasterGraphicsList
     pub fn load_scene(&self, scene: &Scene) {
         for obj in scene.get_objects().iter() {
-            // Clone the object first to get a new instance
             let cloned_obj = obj.read().unwrap().clone(); // Clone the actual object
-            
-            // Wrap the cloned object in Arc and RwLock
             let arc_obj = Arc::new(RwLock::new(cloned_obj));
-            
-            // Add to the master list
             self.add_object(arc_obj);
         }
     }
 
-    // Get an object by ID
-    pub fn get_object(&self, id: u64) -> Option<Arc<RwLock<Generic2DGraphicsObject>>> {
+    // Get an object by name
+    pub fn get_object(&self, name: &str) -> Option<Arc<RwLock<Generic2DGraphicsObject>>> {
         let objects = self.objects.read().unwrap();
-        objects.get(&id).cloned()
+        objects.get(name).cloned()
     }
 
     // Returns a pointer to the entire object list
-    pub fn get_objects(&self) -> Arc<RwLock<HashMap<u64, Arc<RwLock<Generic2DGraphicsObject>>>>> {
+    pub fn get_objects(&self) -> Arc<RwLock<HashMap<String, Arc<RwLock<Generic2DGraphicsObject>>>>> {
         Arc::clone(&self.objects) // Return a clone of the Arc to allow shared access
     }
 
@@ -56,14 +52,17 @@ impl MasterGraphicsList {
                 obj.update_model_matrix(); // Update the model matrix first
                 obj.apply_transform(projection_matrix); // Apply the projection matrix
                 obj.draw(); // Now draw the object
+
+                // If we want to print ALL info for ALL objects
+                obj.print_debug();
             }
         }
     }
     
-    // Remove an object by ID
-    pub fn remove_object(&self, id: u64) {
+    // Remove an object by name
+    pub fn remove_object(&self, name: &str) {
         let mut objects = self.objects.write().unwrap();
-        objects.remove(&id);
+        objects.remove(name);
     }
 
     // Remove all objects from the list

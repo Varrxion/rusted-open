@@ -1,6 +1,7 @@
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use crate::engine::graphics::assets::base::graphics_object::Generic2DGraphicsObject;
+use crate::engine::graphics::internal_object::graphics_object::Generic2DGraphicsObject;
 
 pub struct Scene {
     objects: Vec<Arc<RwLock<Generic2DGraphicsObject>>>, // Use Generic2DGraphicsObject for static objects

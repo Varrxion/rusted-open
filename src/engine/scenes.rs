@@ -1,2 +1,2 @@
-pub mod base;
-pub mod testscene;
+pub mod scene;
+pub mod scene_manager;

@@ -1,18 +1,17 @@
-use std::{collections::HashSet, sync::{Arc, RwLock}};
+use std::{path::Path, sync::{Arc, RwLock}};
 
 use glfw::{Action, Context, GlfwReceiver, Key, WindowEvent};
 use nalgebra::{Matrix4, Vector3};
 
 use crate::engine::{events::{collision, movement::rotate_object}, graphics};
 
-use super::{events::movement::move_object, graphics::{assets::base::graphics_object::{CollisionMode, Generic2DGraphicsObject}, texture_manager::TextureManager, util::{master_clock, master_graphics_list::MasterGraphicsList, master_id_generator::MasterIdGenerator}}, scenes::testscene::TestScene, state::State};
+use super::{events::movement::move_object, graphics::{texture_manager::TextureManager, util::{master_clock, master_graphics_list::MasterGraphicsList}}, scenes::scene_manager::SceneManager, key_states::State};
 
 pub struct EventLoop {
     glfw: glfw::Glfw,
     window: glfw::PWindow,
     events: GlfwReceiver<(f64, WindowEvent)>,
     master_graphics_list: MasterGraphicsList,
-    master_id_generator: Arc<RwLock<MasterIdGenerator>>,
     master_clock: master_clock::MasterClock,
     projection_matrix: Matrix4<f32>,
     current_resolution_index: usize, // Index to track the current resolution
@@ -57,8 +56,6 @@ impl EventLoop {
         // Initialize the master graphics list
         let master_graphics_list = MasterGraphicsList::new();
 
-        let master_id_generator = Arc::new(RwLock::new(MasterIdGenerator::new()));
-
         let master_clock = master_clock::MasterClock::new();
 
         Self {
@@ -66,7 +63,6 @@ impl EventLoop {
             window,
             events,
             master_graphics_list,
-            master_id_generator,
             master_clock,
             projection_matrix,
             current_resolution_index: 3,
@@ -82,30 +78,22 @@ impl EventLoop {
     pub fn run_event_loop(&mut self) {  
         // Create the state to manage keys and other state
         let mut state = State::new();
+
         let texture_manager = Arc::new(RwLock::new(TextureManager::new()));
 
+        let _ = texture_manager.write().unwrap().load_textures_from_directory("src\\resources\\textures");
 
-        let _ = texture_manager.write().unwrap().load_textures_from_directory("src\\engine\\graphics\\assets\\textures");
+        let mut scene_manager = SceneManager::new();
 
-        // Retrieve the texture ID for "BasicCharacter.png"
-        let texture_id = texture_manager.read().unwrap().get_texture_id("Yellow64xCharacter").unwrap(); // Use your method to get the texture ID
+        let path = Path::new("./src/resources/scenes/testscene2.json");
+        let _ = scene_manager.load_scene_from_json(path.to_str().unwrap(), &texture_manager.read().unwrap());
 
-        let mut player_collision_modes = HashSet::new();
-        player_collision_modes.insert(CollisionMode::AABB);
-        player_collision_modes.insert(CollisionMode::Circle);
-
-        let newsquare = {
-            let basesquare = graphics::assets::square_shader::SquareShader::new();
-            Arc::new(RwLock::new(Generic2DGraphicsObject::new(self.master_id_generator.write().unwrap().generate_id(), basesquare.get_vertex_data(), basesquare.get_texture_coords(), basesquare.get_shader_program(), Vector3::zeros(), 0.0, 1.0, Some(texture_id), player_collision_modes)))
-        };
-    
-        let newsquareid = self.master_graphics_list.add_object(newsquare);
-
-        let mut sometestscene = TestScene::new();
-        sometestscene.initialize(self.master_id_generator.clone(), texture_manager);
-
-        self.master_graphics_list.load_scene(sometestscene.get_scene());
-        drop(sometestscene);
+        if let Some(scene) = scene_manager.get_scene("testscene2") {
+            let scene = scene.write().expect("Failed to lock the scene for writing");
+            self.master_graphics_list.load_scene(&scene);
+        } else {
+            println!("Scene 'testscene2' not found");
+        }
         
         while !self.window.should_close() {
             // Update the clock
@@ -141,7 +129,7 @@ impl EventLoop {
             }
     
             // Retrieve the square from the master graphics list
-            let square = self.master_graphics_list.get_object(newsquareid).expect("Object not found");
+            let square = self.master_graphics_list.get_object("debug_playersquare").expect("Object not found");
 
             let delta_time = self.master_clock.get_delta_time();
 
@@ -172,19 +160,19 @@ impl EventLoop {
             //println!("{}", debugpos);
 
             //spin this object for testing
-            if let Some(object_2) = self.master_graphics_list.get_object(4) {
+            if let Some(object_2) = self.master_graphics_list.get_object("testscene2_obj1") {
                 let mut object_2_read = object_2.write().unwrap(); // Read the `newsquare` object
                 let rotfactor = object_2_read.get_rotation()+1.0*delta_time;
                 object_2_read.set_rotation(rotfactor);
             } else {
-                println!("No object found with ID 4.");
+                println!("No object found with name testscene2_obj1.");
             }
 
             // Call the collision checking method
-            let collision_events = collision::check_collisions(&self.master_graphics_list, newsquareid);
+            let collision_events = collision::check_collisions(&self.master_graphics_list, "debug_playersquare");
 
             for event in collision_events {
-                println!("Collision detected between Object ID {} and Object ID {}", event.object_id_1, event.object_id_2);
+                println!("Collision detected between Object ID {} and Object ID {}", event.object_name_1, event.object_name_2);
             }
 
 
