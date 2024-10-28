@@ -1,7 +1,9 @@
 [package]
-name = "RustedOpen"
+name = "rusted_open"
 version = "0.1.0"
+authors =["Jordan Hartsell <hartcoretech@gmail.com>"]
 edition = "2021"
+description = "Open source cross-platform rendering engine in Rust built on OpenGL"
 
 [dependencies]
 glfw = "0.58"
